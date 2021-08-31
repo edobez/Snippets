@@ -1,26 +1,27 @@
 #!/bin/bash
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 # Copy Shared Library Dependencies           [Thomas Lange <code@nerdmind.de>] #
+#                               [Edoardo Bezzeccheri <e.bezzeccheri@gmail.com] #
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 #                                                                              #
 # This script copies all shared library dependencies from a binary source file #
-# to a desired target directory. The directory structure of the libraries will #
-# be mapped relative to the target directory. The binary file itself will also #
-# be copied to the target directory.                                           #
+# to a desired target directory. 	                                       #
 #                                                                              #
 # OPTION [-b]: Full path to the binary whose dependencies shall be copied.     #
 # OPTION [-t]: Full path to the target directory for the dependencies.         #
+# OPTION [-r]: Regex passed to AWK to filter dependencies.                     #
 #                                                                              #
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 #===============================================================================
 # Parsing command-line arguments with the getopts shell builtin
 #===============================================================================
-while getopts :b:t: option
+while getopts :b:t:r: option
 do
 	case $option in
 		b) ARGUMENT_BINARY="$OPTARG" ;;
 		t) ARGUMENT_TARGET="$OPTARG" ;;
+		r) FILTER_REGEX="$OPTARG" ;;
 	esac
 done
 
@@ -42,14 +43,9 @@ done
 [ ! -d "${ARGUMENT_TARGET}" ] && echo "$0: Target path does not exists." >&2 && exit 1
 
 #===============================================================================
-# Copy binary file with its parent directories to the target directory
-#===============================================================================
-cp --verbose --parents "${ARGUMENT_BINARY}" "${ARGUMENT_TARGET}"
-
-#===============================================================================
 # Copy each library with its parent directories to the target directory
 #===============================================================================
-for library in $(ldd "${ARGUMENT_BINARY}" | cut -d '>' -f 2 | awk '{print $1}')
+for library in $(ldd "${ARGUMENT_BINARY}" | cut -d '>' -f 2 | awk '/'${FILTER_REGEX}'/{print $1}')
 do
-	[ -f "${library}" ] && cp --verbose --parents "${library}" "${ARGUMENT_TARGET}"
+	[ -f "${library}" ] && cp --verbose "${library}" "${ARGUMENT_TARGET}"
 done
